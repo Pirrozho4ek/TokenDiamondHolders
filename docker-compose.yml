@@ -1,0 +1,38 @@
+version: "3.8"
+
+services:
+  ollama:
+    image: ollama/ollama
+    container_name: ollama2
+    ports:
+      - "11434:11434"
+    command: ["ollama", "serve"]
+    volumes:
+      - ollama_data:/root/.ollama
+
+  ollama-init:
+    image: ollama/ollama
+    depends_on:
+      - ollama
+    entrypoint: ["sh", "-c", "sleep 5 && ollama pull llama3:latest"]
+    volumes:
+      - ollama_data:/root/.ollama
+
+  agent:
+    build: .
+    container_name: diamond-agent
+    depends_on:
+      - ollama
+    # environment:
+    #   BITQUERY_GRAPHQL_URL: https://streaming.bitquery.io/graphql
+    #   OPENAI_API_KEY: dummy
+    #   MODEL_NAME: llama3.1
+    #   MODEL_BASE_URL: http://host.docker.internal:11434/v1
+    #   OPENAI_AGENTS_DISABLE_TRACING: 1
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+
+volumes:
+  ollama_data:

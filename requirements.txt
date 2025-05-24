@@ -1,0 +1,9 @@
+openai-agents
+fastapi>=0.110
+uvicorn[standard]>=0.27
+pydantic>=2.0
+requests
+openai
+python-dotenv
+asyncpg
+web3>=6.15.1
