@@ -5,34 +5,63 @@ services:
     image: ollama/ollama
     container_name: ollama2
     ports:
-      - "11434:11434"
-    command: ["ollama", "serve"]
+      - "11435:11434"
     volumes:
       - ollama_data:/root/.ollama
+    networks:
+      - diamond-network
 
   ollama-init:
     image: ollama/ollama
     depends_on:
       - ollama
-    entrypoint: ["sh", "-c", "sleep 5 && ollama pull llama3:latest"]
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+    entrypoint: ["sh", "-c", "sleep 10 && OLLAMA_HOST=http://ollama:11434 ollama pull llama3.1:latest"]
     volumes:
       - ollama_data:/root/.ollama
+    networks:
+      - diamond-network
 
-  agent:
+  diamond-agent:
     build: .
     container_name: diamond-agent
     depends_on:
       - ollama
-    # environment:
-    #   BITQUERY_GRAPHQL_URL: https://streaming.bitquery.io/graphql
-    #   OPENAI_API_KEY: dummy
-    #   MODEL_NAME: llama3.1
-    #   MODEL_BASE_URL: http://host.docker.internal:11434/v1
-    #   OPENAI_AGENTS_DISABLE_TRACING: 1
     ports:
-      - "8000:8000"
+      - "8001:8000"
     env_file:
       - .env
+    volumes:
+      - .:/app
+    restart: unless-stopped
+    networks:
+      - diamond-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/v1/models"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  open-webui:
+    image: ghcr.io/open-webui/open-webui:main
+    container_name: open-webui-docker
+    depends_on:
+      - diamond-agent
+    ports:
+      - "3001:8080"
+    env_file:
+      - webui.env
+    volumes:
+      - open_webui_data:/app/backend/data
+    restart: unless-stopped
+    networks:
+      - diamond-network
 
 volumes:
   ollama_data:
+  open_webui_data:
+
+networks:
+  diamond-network:
+    driver: bridge
